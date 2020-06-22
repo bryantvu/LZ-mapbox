@@ -2,6 +2,7 @@ package com.futurewei.ld_mapbox;
 
 //hwlocation kit
 import android.Manifest;
+import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
 import android.util.Log;
@@ -173,6 +174,30 @@ public class MainActivity extends AppCompatActivity {
             });
         } catch (Exception e) {
             Log.e(TAG, "getLastLocation exception:" + e.getMessage());
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == 1) {
+            if (grantResults.length == 1) {
+                Log.i(TAG, "onRequestPermissionsResult: apply LOCATION PERMISSION successful");
+                setMapbox();
+            } else {
+                Log.i(TAG, "onRequestPermissionsResult: apply LOCATION PERMISSSION  failed >> grantResults.length == "+grantResults.length);
+            }
+        }
+
+        if (requestCode == 2) {
+            if (grantResults.length > 2 && grantResults[2] == PackageManager.PERMISSION_GRANTED
+                    && grantResults[0] == PackageManager.PERMISSION_GRANTED
+                    && grantResults[1] == PackageManager.PERMISSION_GRANTED) {
+                Log.i(TAG, "onRequestPermissionsResult: apply ACCESS_BACKGROUND_LOCATION successful");
+                setMapbox();
+            } else {
+                Log.i(TAG, "onRequestPermissionsResult: apply ACCESS_BACKGROUND_LOCATION  failed");
+            }
         }
     }
 
