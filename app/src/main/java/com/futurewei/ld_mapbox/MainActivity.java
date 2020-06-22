@@ -1,6 +1,7 @@
 package com.futurewei.ld_mapbox;
 
 //hwlocation kit
+import android.Manifest;
 import android.location.Location;
 import android.os.Bundle;
 import android.util.Log;
@@ -9,6 +10,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.huawei.hmf.tasks.OnFailureListener;
 import com.huawei.hmf.tasks.OnSuccessListener;
+import com.huawei.hmf.tasks.Task;
 import com.huawei.hms.common.ApiException;
 import com.huawei.hms.common.ResolvableApiException;
 import com.huawei.hms.location.FusedLocationProviderClient;
@@ -33,6 +35,7 @@ import java.util.List;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 
 import android.os.Bundle;
 
@@ -49,6 +52,8 @@ public class MainActivity extends AppCompatActivity {
     private static final long DEFAULT_MAX_WAIT_TIME = DEFAULT_INTERVAL_IN_MILLISECONDS * 5;
     private PermissionsManager permissionsManager;
     private LocationEngine locationEngine;
+    private PermissionManager permissionManager;
+    private final int REQUEST_LOCATION = 1;
 
     //HW linda
     public static final String TAG = "LocationUpdatesCallback";
@@ -57,8 +62,8 @@ public class MainActivity extends AppCompatActivity {
     LocationRequest mLocationRequest;
 
     private FusedLocationProviderClient fusedLocationProviderClient;
-
     private SettingsClient settingsClient;
+    private LocationRequest locationRequest;
 
     private MapboxMap mapboxMap;
     //HW linda
@@ -67,149 +72,111 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-// Mapbox access token is configured here. This needs to be called either in your application
-// object or in the same activity which contains the mapview.
+        permissionManager = new PermissionManager(this);
+
         Mapbox.getInstance(this, getString(R.string.access_token));
 
-// This contains the MapView in XML and needs to be called after the access token is configured.
         setContentView(R.layout.activity_main);
 
+
         mapView = findViewById(R.id.mapView);
+        checkPermission();
+
+        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
+        settingsClient = LocationServices.getSettingsClient(this);
+        locationRequest = LocationRequest.create();
+        locationRequest.setInterval(60000);
+        locationRequest.setFastestInterval(3000);
+        locationRequest.setNumUpdates(1);
+        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+
+    }
+
+    public void setMapbox(){
         mapView.getMapAsync(new OnMapReadyCallback() {
             @Override
-            public void onMapReady(@NonNull MapboxMap mapboxMap) {
+            public void onMapReady(@NonNull final MapboxMap mapboxMap) {
                 mapboxMap.setStyle(Style.MAPBOX_STREETS, new Style.OnStyleLoaded() {
                     @Override
                     public void onStyleLoaded(@NonNull Style style) {
-                    //mapView.getLocationOnScreen();
+                        //mapView.getLocationOnScreen();
 // Map is set up and the style has loaded. Now you can add data or make other map adjustments.
                         //mapboxMap.getLocationComponent().forceLocationUpdate(location);
                     }
                     // this.locationgetLocationComponent().forceLocationUpdate(location);
                 });
+                setLocation(mapboxMap);
 
-              //ld
+            }
+        });
+    }
 
-                //ld
-                // Map is set up and the style has loaded. Now you can add data or make other map adjustments.
-                // create fusedLocationProviderClient linda
-                //fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient();
-                // create settingsClient
-                //settingsClient = LocationServices.getSettingsClient(this);
-                mLocationRequest = new LocationRequest();
-                // Set the interval for location updates, in milliseconds.
-                mLocationRequest.setInterval(10000);
-                // set the priority of the request
-                mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
 
-                try{
+    private void checkPermission(){
+        permissionManager.checkPermission(this, Manifest.permission.ACCESS_FINE_LOCATION, new PermissionManager.PermissionAskListener() {
+            @Override
+            public void onNeedPermission() {
+                ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_LOCATION);
+                ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, REQUEST_LOCATION);
+            }
+
+            @Override
+            public void onPermissionPreviouslyDenied() {
+//                    showCameraRational();
+            }
+
+            @Override
+            public void onPermissionPreviouslyDeniedWithNeverAskAgain() {
+//                    dialogForSettings("Permission Denied", "Please go to settings to enable location permission.");
+            }
+
+            @Override
+            public void onPermissionGranted() {
+                //permissionIsGranted = true;
+                setMapbox();
+            }
+        });
+
+    }
+
+    public void setLocation(final MapboxMap mapboxMap){
+        Log.d(TAG, "setLocation");
+
+        try {
+            fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
+            Task<Location> lastLocation = fusedLocationProviderClient.getLastLocation();
+            lastLocation.addOnSuccessListener(new OnSuccessListener<Location>() {
+                @Override
+                public void onSuccess(Location location) {
+                    if (location == null) {
+                        Log.i(TAG, "getLastLocation onSuccess location is null");
+                        return;
+                    }
+                    Log.i(TAG,
+                            "getLastLocation onSuccess location[Longitude,Latitude]:" + location.getLongitude() + ","
+                                    + location.getLatitude());
                     CameraPosition position = new CameraPosition.Builder()
-                            .target(new LatLng(37.7749, -122.4194)) // Sets the new camera position
+                            .target(new LatLng(location.getLatitude(), location.getLongitude())) // Sets the new camera position
                             .zoom(17) // Sets the zoom
                             .bearing(0) // Rotate the camera
                             .tilt(0) // Set the camera tilt
                             .build(); // Creates a CameraPosition from the builder
 
-
                     mapboxMap.setCameraPosition(position);
-
-                }catch(Exception e){
-                    Log.d(TAG, "error changing location >> "+e.toString());
+                    return;
                 }
-
-
-
-
-//                if (null == mLocationCallback) {
-//                    mLocationCallback = new LocationCallback() {
-//                        @Override
-//                        public void onLocationResult(LocationResult locationResult) {
-//                            if (locationResult != null) {
-//                                List<Location> locations = locationResult.getLocations();
-//                                //linda hw
-//
-//                                if (!locations.isEmpty()) {
-//                                    for (Location location : locations) {
-//                                        Log.i(TAG,
-//                                                "onLocationResult location[Longitude,Latitude,Accuracy]:" + location.getLongitude()
-//                                                        + "," + location.getLatitude() + "," + location.getAccuracy());
-//                                        location.setLatitude(37.7749);
-//                                        location.setLongitude(-122.4194);
-//                                        location.setAccuracy(200);
-//
-//                                        mapboxMap.getLocationComponent().forceLocationUpdate(location);
-//
-//
-//                                    }
-//                                    //locationEngine.getLastLocation();
-//                                    //mapboxMap.getLocationComponent().forceLocationUpdate(location);
-//                                    //linda: hw
-//                                }
-//                            }
-//
-//                        }
-//                    };
-//                }
-
-                // void onMapReady(MapboxMap mapboxMap) {
-              //  ld
-
-            }
-        });
-
-/*
-        //linda
-        // Map is set up and the style has loaded. Now you can add data or make other map adjustments.
-        // create fusedLocationProviderClient linda
-        //fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient();
-        // create settingsClient
-        // settingsClient = LocationServices.getSettingsClient(this);
-        mLocationRequest = new LocationRequest();
-        // Set the interval for location updates, in milliseconds.
-        mLocationRequest.setInterval(10000);
-        // set the priority of the request
-        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-
-        if (null == mLocationCallback) {
-            mLocationCallback = new LocationCallback() {
+            }).addOnFailureListener(new OnFailureListener() {
                 @Override
-                public void onLocationResult(LocationResult locationResult) {
-                    if (locationResult != null) {
-                        List<Location> locations = locationResult.getLocations();
-                        //linda hw
-
-                        if (!locations.isEmpty()) {
-                            for (Location location : locations) {
-                                Log.i(TAG,
-                                        "onLocationResult location[Longitude,Latitude,Accuracy]:" + location.getLongitude()
-                                                + "," + location.getLatitude() + "," + location.getAccuracy());
-                                location.setLatitude(37.7749);
-                                location.setLongitude(-122.4194);
-                                location.setAccuracy(200);
-
-                                mapboxMap.getLocationComponent().forceLocationUpdate(location);
-
-
-                            }
-                            //locationEngine.getLastLocation();
-                            //mapboxMap.getLocationComponent().forceLocationUpdate(location);
-                            //linda: hw
-                        }
-                    }
-
+                public void onFailure(Exception e) {
+                    Log.e(TAG, "getLastLocation onFailure:" + e.getMessage());
                 }
-            };
-        }*/
-
-        // void onMapReady(MapboxMap mapboxMap) {
+            });
+        } catch (Exception e) {
+            Log.e(TAG, "getLastLocation exception:" + e.getMessage());
+        }
     }
-    //mapView.getMapAsync(new OnMapReadyCallback() );
-    // mapView.getMapAsync(this);
-
-    //linda
 
 
-    // Add the mapView lifecycle to the activity's lifecycle methods
     @Override
     public void onResume() {
         super.onResume();
