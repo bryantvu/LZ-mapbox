@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">ld_Mapbox</string>
+    <string name="title_activity_main">HWS Location Map box</string>
+    <string name="access_token">pk.eyJ1IjoibHpoYW5nY3MiLCJhIjoiY2tibG95d3Q1MDNuZjM1bGJmMnBtMXp5cyJ9.0qNqKQFrG-sH-tgT3NdFzw</string>
+</resources>

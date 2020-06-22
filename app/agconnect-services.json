@@ -1,0 +1,12 @@
+{
+	"client":{
+		"cp_id":"890001000000000755",
+		"product_id":"736430079244518781",
+		"client_id":"387190212414932096",
+		"client_secret":"CD3D278B48598DAFE3E3371E913949D6D8137216400C40BC68CB420AA11D79B4",
+		"app_id":"102419807",
+		"package_name":"com.futurewei.ld_mapbox",
+		"api_key":"CV8SFY5wXKr6k9taO2jmZkIsQdh9weg7iCp5IP7Ak8OBUpAsqaY4JRv85piOhtW6XxYgFWSo9QaBpoBsOkseOwY92QiH"
+	},
+	"configuration_version":"1.0"
+}
